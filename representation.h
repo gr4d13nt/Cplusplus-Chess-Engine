@@ -24,23 +24,22 @@ public:
   U64 BR = 0;
   U64 BQ = 0;
   U64 BK = 0;
+  U64 EP = 0;
 
-  bool side_to_move;                 // Indicates which side is to move
-  const int white_kingside = 1;      // 0001 in binary
-  const int white_queenside = 2;     // 0010 in binary
-  const int black_kingside = 4;      // 0100 in binary
-  const int black_queenside = 8;     // 1000 in binary
-  unsigned char castling_rights = 0; // Castling rights
-  int en_passant_square;             // En passant target square
-  int halfmove_clock;                // Halfmove clock for 50-move rule
-  int fullmove_number; // Fullmove number, incremented after black's move
-  std::string fen;     // FEN string representing the position
+  bool side_to_move; // Indicates which side is to move
+  bool white_kingside = true;
+  bool white_queenside = true;
+  bool black_kingside = true;
+  bool black_queenside = true;
+  int halfmove_clock;    // Halfmove clock for 50-move rule
+  int fullmove_number;   // Fullmove number, incremented after black's move
+  std::string fen;       // FEN string representing the position
 
   // Constructor to initialize Position with a FEN string
-  Position(std::string fen);
+  // Position(std::string fen);
 
   // Method to print the position
-  void print();
+  // void print();
 
   // Static methods related to chess position
   void initiateStandardChess();

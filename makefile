@@ -1,16 +1,31 @@
-CC = g++
-CFLAGS = -std=c++11 -Wall -Wextra -std=c++11
+# Define compiler and flags
+CXX = g++
+CXXFLAGS = -Wall -g -std=c++11
 
-all: chess_engine
+# Define the target executable
+TARGET = main
 
-chess_engine: moves.o representation.o
-	$(CC) $(CFLAGS) -o chess_engine moves.o representation.o
+# Define object files
+OBJ = main.o moves.o representation.o perft.o
 
-moves.o: moves.cpp representation.h
-	$(CC) $(CFLAGS) -c moves.cpp
+# Define header files
+HEADERS = moves.h representation.h perft.h
 
-representation.o: representation.cpp representation.h
-	$(CC) $(CFLAGS) -c representation.cpp
+# First rule is the one executed when no parameters are fed to the Makefile
+all: $(TARGET)
 
+# Rule for linking the program
+$(TARGET): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+# Rule for building each object file
+%.o: %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $<
+
+# Rule for cleaning up generated files
 clean:
-	rm -rf *.o chess_engine
+	rm -f $(TARGET) $(OBJ)
+
+# Rule for running the program
+run: $(TARGET)
+	./$(TARGET)

@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+DerivePointerAlignment: false
+PointerAlignment: Left
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterEnum: false
+  AfterStruct: false
+  SplitEmptyFunction: false
+  AfterCaseLabel: false
+  AfterControlStatement: false
+  BeforeElse: true
+  BeforeCatch: true
