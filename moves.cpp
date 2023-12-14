@@ -120,20 +120,21 @@ U64 Moves::makeMove(U64 board, const string& move, char type) {
     else if (move[3] == 'E') { // en passant
         int start, end;
         if (move[2] == 'W') {
-            start = (move[0] - '0') * 8 + 3;
-            end = (move[1] - '0') * 8 + 2;
-            board &= ~(1ULL << ((move[1] - '0') * 8 + 3));
+            start = __builtin_ctzll(FileMasks8[move[0] - '0'] & RankMasks8[3]);
+            end = __builtin_ctzll(FileMasks8[move[1] - '0'] & RankMasks8[2]);
+            board &= ~(FileMasks8[move[1] - '0'] & RankMasks8[3]);
         }
         else {
-            start = (move[0] - '0') * 8 + 4;
-            end = (move[1] - '0') * 8 + 5;
-            board &= ~(1ULL << ((move[1] - '0') * 8 + 4));
+            start = __builtin_ctzll(FileMasks8[move[0] - '0'] & RankMasks8[4]);
+            end = __builtin_ctzll(FileMasks8[move[1] - '0'] & RankMasks8[5]);
+            board &= ~(FileMasks8[move[1] - '0'] & RankMasks8[4]);
         }
-        if ((board >> start) & 1) {
+        if (((board >> start) & 1) == 1) {
             board &= ~(1ULL << start);
             board |= (1ULL << end);
         }
     }
+
     else {
         std::cerr << "ERROR: Invalid move type" << std::endl;
     }
@@ -187,7 +188,8 @@ U64 Moves::HAndVMoves(int s, U64 OCCUPIED) {
         reverse(reverse(OCCUPIED) - 2 * reverse(binaryS));
     U64 possibilitiesVertical =
         ((OCCUPIED & Moves::FileMasks8[s % 8]) - (2 * binaryS)) ^
-        reverse(reverse(OCCUPIED & Moves::FileMasks8[s % 8]) - (2 * reverse(binaryS)));
+        reverse(reverse(OCCUPIED & Moves::FileMasks8[s % 8]) -
+                (2 * reverse(binaryS)));
     return (possibilitiesHorizontal & Moves::RankMasks8[s / 8]) |
            (possibilitiesVertical & Moves::FileMasks8[s % 8]);
 }
@@ -223,8 +225,8 @@ string Moves::possibleMovesW(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK,
     string list = possiblePW(WP, BP, EP) + possibleB(OCCUPIED, WB) +
                   possibleR(OCCUPIED, WR) + possibleQ(OCCUPIED, WQ) +
                   possibleK(OCCUPIED, WK) + possibleN(OCCUPIED, WN) +
-                  possibleCW(WR, white_kingside, white_queenside);
-    // unsafeForBlack(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK);
+                  possibleCW(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK,
+                             white_kingside, white_queenside);
     return list;
 }
 
@@ -241,8 +243,8 @@ string Moves::possibleMovesB(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK,
     string list = possibleBP(BP, WP, EP) + possibleB(OCCUPIED, BB) +
                   possibleR(OCCUPIED, BR) + possibleQ(OCCUPIED, BQ) +
                   possibleK(OCCUPIED, BK) + possibleN(OCCUPIED, BN) +
-                  possibleCB(BR, black_kingside, black_queenside);
-    // unsafeForWhite(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK);
+                  possibleCB(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK,
+                             black_kingside, black_queenside);
     return list;
 }
 
@@ -333,7 +335,7 @@ string Moves::possiblePW(U64 WP, U64 BP, U64 EP) {
                   EP; // Shows piece to remove, not the destination
     if (possibility != 0) {
         int index = __builtin_ctzll(possibility);
-        list += to_string(index % 8 - 1) + to_string(index % 8) + " E";
+        list += to_string(index % 8 - 1) + to_string(index % 8) + "WE";
     }
 
     // En passant left
@@ -341,7 +343,7 @@ string Moves::possiblePW(U64 WP, U64 BP, U64 EP) {
                   EP; // Shows piece to remove, not the destination
     if (possibility != 0) {
         int index = __builtin_ctzll(possibility);
-        list += to_string(index % 8 + 1) + to_string(index % 8) + " E";
+        list += to_string(index % 8 + 1) + to_string(index % 8) + "WE";
     }
 
     return list;
@@ -440,7 +442,7 @@ string Moves::possibleBP(U64 BP, U64 WP, U64 EP) {
                   EP; // Shows piece to remove, not the destination
     if (possibility != 0) {
         int index = __builtin_ctzll(possibility);
-        list += to_string(index % 8 + 1) + to_string(index % 8) + "bE";
+        list += to_string(index % 8 + 1) + to_string(index % 8) + "BE";
     }
 
     // En passant left
@@ -448,7 +450,7 @@ string Moves::possibleBP(U64 BP, U64 WP, U64 EP) {
                   EP; // Shows piece to remove, not the destination
     if (possibility != 0) {
         int index = __builtin_ctzll(possibility);
-        list += to_string(index % 8 - 1) + to_string(index % 8) + "bE";
+        list += to_string(index % 8 - 1) + to_string(index % 8) + "BE";
     }
 
     return list;
@@ -601,24 +603,46 @@ string Moves::possibleN(U64 OCCUPIED, U64 N) {
     return list;
 }
 
-string Moves::possibleCW(U64 WR, bool CWK, bool CWQ) {
-    string list = "";
-    if (CWK && ((1ULL << CASTLE_ROOKS[0]) & WR) != 0) {
-        list += "7476";
-    }
-    if (CWQ && ((1ULL << CASTLE_ROOKS[1]) & WR) != 0) {
-        list += "7472";
+string Moves::possibleCW(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK, U64 BP,
+                         U64 BN, U64 BB, U64 BR, U64 BQ, U64 BK, bool CWK,
+                         bool CWQ) {
+    std::string list = "";
+    U64 UNSAFE = unsafeForWhite(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK);
+
+    if ((UNSAFE & WK) == 0) {
+        if (CWK && (((1ULL << CASTLE_ROOKS[0]) & WR) != 0)) {
+            if (((OCCUPIED | UNSAFE) & ((1ULL << 61) | (1ULL << 62))) == 0) {
+                list += "7476";
+            }
+        }
+        if (CWQ && (((1ULL << CASTLE_ROOKS[1]) & WR) != 0)) {
+            if (((OCCUPIED | (UNSAFE & ~(1ULL << 57))) &
+                 ((1ULL << 57) | (1ULL << 58) | (1ULL << 59))) == 0) {
+                list += "7472";
+            }
+        }
     }
     return list;
 }
 
-string Moves::possibleCB(U64 BR, bool CBK, bool CBQ) {
-    string list = "";
-    if (CBK && ((1ULL << CASTLE_ROOKS[2]) & BR) != 0) {
-        list += "0406";
-    }
-    if (CBQ && ((1ULL << CASTLE_ROOKS[3]) & BR) != 0) {
-        list += "0402";
+string Moves::possibleCB(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK, U64 BP,
+                         U64 BN, U64 BB, U64 BR, U64 BQ, U64 BK, bool CBK,
+                         bool CBQ) {
+    std::string list = "";
+    U64 UNSAFE = unsafeForBlack(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK);
+
+    if ((UNSAFE & BK) == 0) {
+        if (CBK && (((1ULL << CASTLE_ROOKS[2]) & BR) != 0)) {
+            if (((OCCUPIED | UNSAFE) & ((1ULL << 5) | (1ULL << 6))) == 0) {
+                list += "0406";
+            }
+        }
+        if (CBQ && (((1ULL << CASTLE_ROOKS[3]) & BR) != 0)) {
+            if (((OCCUPIED | (UNSAFE & ~(1ULL << 1))) &
+                 ((1ULL << 1) | (1ULL << 2) | (1ULL << 3))) == 0) {
+                list += "0402";
+            }
+        }
     }
     return list;
 }
@@ -807,7 +831,8 @@ U64 Moves::unsafeForWhite(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK,
 //     string moves =
 //         possibleMovesW(p.WP, p.WN, p.WB, p.WR, p.WQ, p.WK, p.BP, p.BN, p.BB,
 //                        p.BR, p.BQ, p.BK, p.EP, p.white_kingside,
-//                        p.white_queenside, p.black_kingside, p.black_queenside);
+//                        p.white_queenside, p.black_kingside,
+//                        p.black_queenside);
 //     for (int i = 0; i < moves.size(); i += 4) {
 //         Position p2 = makeMove(p, moves.substr(i, 4), moves[i + 4]);
 //         nodes += perft(depth - 1, p2);

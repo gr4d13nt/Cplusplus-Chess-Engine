@@ -84,9 +84,13 @@ class Moves {
 
     static string possibleN(U64 OCCUPIED, U64 N);
 
-    static string possibleCW(U64 WR, bool CWK, bool CWQ);
+    static string possibleCW(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK,
+                       U64 BP, U64 BN, U64 BB, U64 BR, U64 BQ, U64 BK,
+                       bool CWK, bool CWQ);
 
-    static string possibleCB(U64 BR, bool CBK, bool CBQ);
+    static string possibleCB(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK,
+                       U64 BP, U64 BN, U64 BB, U64 BR, U64 BQ, U64 BK,
+                       bool CWK, bool CWQ);
 
     static uint64_t unsafeForBlack(uint64_t WP, uint64_t WN, uint64_t WB,
                                    uint64_t WR, uint64_t WQ, uint64_t WK,
