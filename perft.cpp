@@ -1,180 +1,58 @@
 #include "perft.h"
 
-std::string moveToAlgebra(const std::string& move) {
-    std::string moveString = "";
-    moveString += static_cast<char>(move[1] + 49);
-    moveString += static_cast<char>(104 - move[0]);
-    moveString += static_cast<char>(move[3] + 49);
-    moveString += static_cast<char>(104 - move[2]);
-    return moveString;
+void Perft::perft(Position *poss, const DATA& in, COLOR color, int depth)
+{
+	if (depth > _maxDepth)
+		return;
+	
+	string moves = poss->PossibleMoves(in, color);
+
+	for (size_t i = 0; i < moves.length(); i += 4)
+	{
+		DATA out;
+		if (!poss->MakeMoves(moves.substr(i, 4), in, out))
+			_invalidMoves++;
+		else if (poss->UnsafeFor(color, out))
+		{
+			if (depth + 1 == _maxDepth)
+				_moveCounter++;
+			perft(poss, out, (COLOR)(1 - color), depth + 1);
+		}
+	}
 }
 
-int perftTotalMoveCounter = 0;
-int perftMoveCounter = 0;
-int perftMaxDepth = 6;
+void Perft::perftRoot(Position *poss, const DATA& in, COLOR color, int depth)
+{
+	string moves = poss->PossibleMoves(in, color);
 
-void perft(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK, U64 BP, U64 BN,
-           U64 BB, U64 BR, U64 BQ, U64 BK, U64 EP, bool CWK, bool CWQ, bool CBK,
-           bool CBQ, bool WhiteToMove, int depth) {
-    if (depth < perftMaxDepth) {
-        std::string moves;
-        if (WhiteToMove) {
-            moves = Moves::possibleMovesW(WP, WN, WB, WR, WQ, WK, BP, BN, BB,
-                                          BR, BQ, BK, EP, CWK, CWQ, CBK, CBQ);
-        }
-        else {
-            moves = Moves::possibleMovesB(WP, WN, WB, WR, WQ, WK, BP, BN, BB,
-                                          BR, BQ, BK, EP, CWK, CWQ, CBK, CBQ);
-        }
+	for (size_t i = 0; i < moves.length(); i += 4)
+	{
+		DATA out;
+		if (!poss->MakeMoves(moves.substr(i, 4), in, out))
+			_invalidMoves++;
+		else if (poss->UnsafeFor(color, out))
+		{
+			perft(poss, out, (COLOR)(1 - color), depth + 1);
 
-        for (size_t i = 0; i < moves.length(); i += 4) {
-            U64 WPt = Moves::makeMove(WP, moves.substr(i, 4), 'P'),
-                WNt = Moves::makeMove(WN, moves.substr(i, 4), 'N'),
-                WBt = Moves::makeMove(WB, moves.substr(i, 4), 'B'),
-                WRt = Moves::makeMove(WR, moves.substr(i, 4), 'R'),
-                WQt = Moves::makeMove(WQ, moves.substr(i, 4), 'Q'),
-                WKt = Moves::makeMove(WK, moves.substr(i, 4), 'K'),
-                BPt = Moves::makeMove(BP, moves.substr(i, 4), 'p'),
-                BNt = Moves::makeMove(BN, moves.substr(i, 4), 'n'),
-                BBt = Moves::makeMove(BB, moves.substr(i, 4), 'b'),
-                BRt = Moves::makeMove(BR, moves.substr(i, 4), 'r'),
-                BQt = Moves::makeMove(BQ, moves.substr(i, 4), 'q'),
-                BKt = Moves::makeMove(BK, moves.substr(i, 4), 'k'),
-                EPt = Moves::makeMoveEP(WP | BP, moves.substr(i, 4));
-
-            WRt = Moves::makeMoveCastle(WRt, WK | BK, moves.substr(i, 4), 'R');
-            BRt = Moves::makeMoveCastle(BRt, WK | BK, moves.substr(i, 4), 'r');
-
-            bool CWKt = CWK, CWQt = CWQ, CBKt = CBK, CBQt = CBQ;
-            if (isdigit(moves[i + 3])) {
-            int start = (moves[i] - '0') * 8 + (moves[i + 1] - '0');
-            if (((1ULL << start) & (WP | BP)) != 0) {
-                if (abs(moves[i] - moves[i + 2]) == 2) {
-                    EPt = Moves::FileMasks8[moves[i + 1] - '0'];
-                }
-            }
-            else if (((1ULL << start) & WK) != 0) {
-                CWKt = false;
-                CWQt = false;
-            }
-            else if (((1ULL << start) & BK) != 0) {
-                CBKt = false;
-                CBQt = false;
-            }
-            else if (((1ULL << start) & WR &
-                     (1ULL << Moves::CASTLE_ROOKS[0])) != 0) {
-                CWKt = false;
-            }
-            else if (((1ULL << start) & WR &
-                     (1ULL << Moves::CASTLE_ROOKS[1])) != 0) {
-                CWQt = false;
-            }
-            else if (((1ULL << start) & BR &
-                     (1ULL << Moves::CASTLE_ROOKS[2])) != 0) {
-                CBKt = false;
-            }
-            else if (((1ULL << start) & BR & 1ULL) != 0) {
-                CBQt = false;
-            }
-        }
-
-            if (((WKt & Moves::unsafeForWhite(WPt, WNt, WBt, WRt, WQt, WKt, BPt,
-                                              BNt, BBt, BRt, BQt, BKt)) == 0 &&
-                 WhiteToMove) ||
-                ((BKt & Moves::unsafeForBlack(WPt, WNt, WBt, WRt, WQt, WKt, BPt,
-                                              BNt, BBt, BRt, BQt, BKt)) == 0 &&
-                 !WhiteToMove)) {
-                if (depth + 1 == perftMaxDepth) {
-                    perftMoveCounter++;
-                }
-                perft(WPt, WNt, WBt, WRt, WQt, WKt, BPt, BNt, BBt, BRt, BQt,
-                      BKt, EPt, CWKt, CWQt, CBKt, CBQt, !WhiteToMove,
-                      depth + 1);
-            }
-        }
-    }
+			Logger::Write(MoveToAlgebra(moves.substr(i, 4)));
+			Logger::Write(_moveCounter, " ", "\n");
+			_totalMoveCounter += _moveCounter;
+			_moveCounter = 0;
+		}
+	}
 }
 
-void perftRoot(uint64_t WP, uint64_t WN, uint64_t WB, uint64_t WR, uint64_t WQ,
-               uint64_t WK, uint64_t BP, uint64_t BN, uint64_t BB, uint64_t BR,
-               uint64_t BQ, uint64_t BK, uint64_t EP, bool CWK, bool CWQ,
-               bool CBK, bool CBQ, bool WhiteToMove, int depth) {
-    std::string moves;
-    if (WhiteToMove) {
-        moves = Moves::possibleMovesW(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR,
-                                      BQ, BK, EP, CWK, CWQ, CBK, CBQ);
-    }
-    else {
-        moves = Moves::possibleMovesB(WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR,
-                                      BQ, BK, EP, CWK, CWQ, CBK, CBQ);
-    }
-
-    for (size_t i = 0; i < moves.length(); i += 4) {
-        uint64_t WPt = Moves::makeMove(WP, moves.substr(i, 4), 'P');
-        uint64_t WNt = Moves::makeMove(WN, moves.substr(i, 4), 'N');
-        uint64_t WBt = Moves::makeMove(WB, moves.substr(i, 4), 'B');
-        uint64_t WRt = Moves::makeMove(WR, moves.substr(i, 4), 'R');
-        uint64_t WQt = Moves::makeMove(WQ, moves.substr(i, 4), 'Q');
-        uint64_t WKt = Moves::makeMove(WK, moves.substr(i, 4), 'K');
-        uint64_t BPt = Moves::makeMove(BP, moves.substr(i, 4), 'p');
-        uint64_t BNt = Moves::makeMove(BN, moves.substr(i, 4), 'n');
-        uint64_t BBt = Moves::makeMove(BB, moves.substr(i, 4), 'b');
-        uint64_t BRt = Moves::makeMove(BR, moves.substr(i, 4), 'r');
-        uint64_t BQt = Moves::makeMove(BQ, moves.substr(i, 4), 'q');
-        uint64_t BKt = Moves::makeMove(BK, moves.substr(i, 4), 'k');
-
-        uint64_t EPt = Moves::makeMoveEP(WP | BP, moves.substr(i, 4));
-        WRt = Moves::makeMoveCastle(WR, WK | BK, moves.substr(i, 4), 'R');
-        BRt = Moves::makeMoveCastle(BR, WK | BK, moves.substr(i, 4), 'r');
-        bool CWKt = CWK, CWQt = CWQ, CBKt = CBK, CBQt = CBQ;
-
-        // Update castle flags based on move
-        // ...
-
-        if (isdigit(moves[i + 3])) {
-            int start = (moves[i] - '0') * 8 + (moves[i + 1] - '0');
-            if (((1ULL << start) & (WP | BP)) != 0) {
-                if (abs(moves[i] - moves[i + 2]) == 2) {
-                    EPt = Moves::FileMasks8[moves[i + 1] - '0'];
-                }
-            }
-            else if (((1ULL << start) & WK) != 0) {
-                CWKt = false;
-                CWQt = false;
-            }
-            else if (((1ULL << start) & BK) != 0) {
-                CBKt = false;
-                CBQt = false;
-            }
-            else if (((1ULL << start) & WR &
-                     (1ULL << Moves::CASTLE_ROOKS[0])) != 0) {
-                CWKt = false;
-            }
-            else if (((1ULL << start) & WR &
-                     (1ULL << Moves::CASTLE_ROOKS[1])) != 0) {
-                CWQt = false;
-            }
-            else if (((1ULL << start) & BR &
-                     (1ULL << Moves::CASTLE_ROOKS[2])) != 0) {
-                CBKt = false;
-            }
-            else if (((1ULL << start) & BR & 1ULL) != 0) {
-                CBQt = false;
-            }
-        }
-
-        if (((WKt & Moves::unsafeForWhite(WPt, WNt, WBt, WRt, WQt, WKt, BPt,
-                                          BNt, BBt, BRt, BQt, BKt)) == 0 &&
-             WhiteToMove) ||
-            ((BKt & Moves::unsafeForBlack(WPt, WNt, WBt, WRt, WQt, WKt, BPt, BNt,
-                                         BBt, BRt, BQt, BKt)) == 0 &&
-                !WhiteToMove)) {
-            perft(WPt, WNt, WBt, WRt, WQt, WKt, BPt, BNt, BBt, BRt, BQt, BKt,
-                  EPt, CWKt, CWQt, CBKt, CBQt, !WhiteToMove, depth + 1);
-            std::cout << moveToAlgebra(moves.substr(i, 4)) << " "
-                      << perftMoveCounter << std::endl;
-            perftTotalMoveCounter += perftMoveCounter;
-            perftMoveCounter = 0;
-        }
-    }
+string Perft::MoveToAlgebra(const string& move)
+{
+	return EmptyString +
+		static_cast<char>(move[1] + 49) +
+		static_cast<char>(104 - move[0]) +
+		static_cast<char>(move[3] + 49) +
+		static_cast<char>(104 - move[2]);
 }
+
+////////////////////Ligger/////////////////////////////////////////
+ofstream Logger::_file;
+time_point<steady_clock> Logger::_st;
+int Logger::_moveCursor = 0;;
+int Logger::_moveCountMax = 0;

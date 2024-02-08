@@ -1,16 +1,48 @@
-#include "moves.h"
-#include "perft.h"
 #include "representation.h"
+#include "perft.h"
 
-int main() {
-    Position p;
-    p.initiateStandardChess();
-    perft(p.WP, p.WN, p.WB, p.WR, p.WQ, p.WK, p.BP, p.BN, p.BB, p.BR, p.BQ,
-              p.BK, p.EP, p.white_kingside, p.white_queenside, p.black_kingside,
-              p.black_queenside, true, 0);
-    cout << perftMoveCounter << endl;
-    // U64 baord = Moves::makeMoveCastle(p.WR, p.WK, "7472", 'R');
-    // U64 king = Moves::makeMove(p.WK, "7475", 'K');
-    // Position::drawArray(p.WP, p.WN, p.WB, p.WR, p.WQ, p.WK, p.BP, p.BN, p.BB,
-                        // p.BR, p.BQ, p.BK);
+using namespace std::chrono;
+
+int main()
+{
+	const short Expected_Count = 7;
+	U64 Expect[Expected_Count] =
+	{
+		0,
+		20,
+		400,
+		8902,
+		197281,
+		4865609,
+		119060324,
+		//18446744072609603475
+	};
+
+	Logger::Start(true);
+	for (int i = 0; i < Expected_Count - 1; i++)
+	{
+		COLOR initColor = WC;
+		Position p(initColor, i == 0);
+		Perft perft;
+
+		try
+		{
+			Logger::ResetClock();
+			perft.SetMaxDepth(i);
+			perft.perft(&p, p.DataInit(), initColor, 0);
+		}
+		catch (...)
+		{
+			Logger::Write("Exception has been thrown performing perft");
+		}
+		if (perft.MoveCounter() != Expect[i])
+			Logger::Write("ERROR: Total move count is not expected!");
+		if (perft._invalidMoves > 0)
+			Logger::Write(perft._invalidMoves, "ERROR: Invalid move type", "\n");
+
+		Logger::Write(perft.MaxDepth(), "MaxDepth");
+		Logger::Write(perft.MoveCounter(), "Count");
+		Logger::Write(Expect[i], "Expected");
+		Logger::WriteTime();
+	}
 }

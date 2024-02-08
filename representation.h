@@ -1,54 +1,99 @@
 #ifndef REPRESENTATION_H
 #define REPRESENTATION_H
 
-#include <iostream>
-#include <string>
-#include <vector>
+#include "moves.h"
 
-// Define U64 as an alias for unsigned 64-bit integer type
-#define U64 u_int64_t
+class Position
+{
+	Piece* _piece[MAX_KEYS] =
+	{
+	   new Pawn(),
+	   new Bishop(),
+	   new Rook(),
+	   new Queen(),
+	   new King(),
+	   new Knight()
+	};
+	
+	DATA _dataInit;
+	
+	U64 _myPieces[MAX_COLORS];
+	U64 _bothKing;
 
-class Position {
+	struct CastleRook
+	{
+		string moveC;
+		U64 StartL;
+		U64 EndL;
+		U64 NotStartL;
+		U64 NotLeft1;
+		U64 LeftAll;
+
+		CastleRook(//CASTLE_ROOKS[]={63, 56, 7, 0}
+			int CASTLE_ROOK, int CASTLE_ROOK_Add,
+			string moveC,
+			int shift1, int shift2, int shift3) : moveC(moveC)
+		{
+			StartL = 1ULL << CASTLE_ROOK;
+			EndL = 1ULL << (CASTLE_ROOK + CASTLE_ROOK_Add);
+			NotStartL = ~StartL;
+
+			NotLeft1 = (shift3 == 0) //King 
+				? UINT64_MAX
+				: ~(1ULL << shift1);
+			LeftAll =
+				(1ULL << shift1) |
+				(1ULL << shift2) |
+				(1ULL << shift3);
+		}
+	}
+	const Castle[MAX_COLORS][MAX_FLAGS] =
+	{
+		{	//White
+			{ 63, -2, "7476", 61, 62, 0 }, //King
+			{ 56,  3, "7472", 57, 58, 59 } //Queen
+		},
+		{	//Black
+			{ 7,  -2, "0406", 5,  6,  0 }, //King
+			{ 0,   3, "0402", 1,  2,  3 }  //Queen
+		}
+	};
+
+	struct StartEnd
+	{
+		int start = -1; //can't be U64 or char!
+		U64 mask;
+		U64 startL = -1;
+		U64 endL = -1;
+		U64 notStartL = -1;
+		U64 notEndL = -1;
+
+		void Set(int s, int e, U64 m = 0)
+		{
+			start = s;
+			mask = m;
+			startL = 1ULL << s;
+			endL = 1ULL << e;
+			notStartL = ~startL;
+			notEndL = ~endL;
+		}
+	} _se;
+
 public:
-  U64 bitboards[12]; // Array to store bitboards
+	Position(COLOR initColor = WC, bool print = true);
+	~Position();
 
-  U64 WP = 0;
-  U64 WN = 0;
-  U64 WB = 0;
-  U64 WR = 0;
-  U64 WQ = 0;
-  U64 WK = 0;
-  U64 BP = 0;
-  U64 BN = 0;
-  U64 BB = 0;
-  U64 BR = 0;
-  U64 BQ = 0;
-  U64 BK = 0;
-  U64 EP = 0;
+	const DATA& DataInit() { return _dataInit; }
 
-  bool side_to_move; // Indicates which side is to move
-  bool white_kingside = true;
-  bool white_queenside = true;
-  bool black_kingside = true;
-  bool black_queenside = true;
-  int halfmove_clock;    // Halfmove clock for 50-move rule
-  int fullmove_number;   // Fullmove number, incremented after black's move
-  std::string fen;       // FEN string representing the position
+	string PossibleMoves(const DATA& in, COLOR clr);
+	bool MakeMoves(const string& move, const DATA& in, DATA& dataOut);
+	bool UnsafeFor(COLOR color, const DATA& in);
 
-  // Constructor to initialize Position with a FEN string
-  // Position(std::string fen);
+private:
+	void ArrayToBitborards(char chessBoard[Eight][Eight]);
+	void PrintByKeys();
 
-  // Method to print the position
-  // void print();
-
-  // Static methods related to chess position
-  void initiateStandardChess();
-  static void arrayToBitboards(char chessBoard[8][8], U64 &WP, U64 &WN, U64 &WB,
-                               U64 &WR, U64 &WQ, U64 &WK, U64 &BP, U64 &BN,
-                               U64 &BB, U64 &BR, U64 &BQ, U64 &BK);
-  static U64 convertStringToBitboard(std::string binary);
-  static void drawArray(U64 WP, U64 WN, U64 WB, U64 WR, U64 WQ, U64 WK, U64 BP,
-                        U64 BN, U64 BB, U64 BR, U64 BQ, U64 BK);
+	void PrintBitBoard(U64 bitBoard);
 };
 
 #endif // REPRESENTATION_H
